@@ -1,0 +1,109 @@
+%% Punto 1%%
+
+herramientasRequeridas(ordenarCuarto, [[aspiradora(100), escoba], trapeador, plumero]).
+herramientasRequeridas(limpiarTecho, [escoba, pala]).
+herramientasRequeridas(cortarPasto, [bordedadora]).
+herramientasRequeridas(limpiarBanio, [sopapa, trapeador]).
+herramientasRequeridas(encerarPisos, [lustradpesora, cera, aspiradora(300)]).
+herramientasRequeridas(limpiarCalle, [trapeador, aspiradora(100)]).
+
+% Egon tiene una aspiradora de 200 de potencia.
+% Egon y Peter tienen un trapeador, Ray y Winston no.
+% Sólo Winston tiene una varita de neutrones.
+% Nadie tiene una bordeadora.
+
+tarea(ordenarCuarto).
+tarea(limpiarBanio).
+tarea(limpiarTecho).
+tarea(encerarPisos).
+tarea(cortarPasto).
+tarea(limpiarCalle).
+
+tiene(egon, aspiradora(200)).
+tiene(egon, trapeador).
+tiene(egon, plumero).
+tiene(peter, trapeador).
+tiene(peter, sopapa).
+tiene(winston, varitaDeNeutrones).
+
+buster(egon).
+buster(peter).
+buster(winston).
+buster(ray).
+
+satisfaceNecesidad(Integrante, HerramientaRequerida):-
+    tiene(Integrante, HerramientaRequerida).
+
+satisfaceNecesidad(Integrante, aspiradora(PotenciaRequerida)):-
+   tiene(Integrante,aspiradora(Potencia)),
+   Potencia >= PotenciaRequerida.
+
+satisfaceNecesidad(Integrante, [aspiradora(Potencia),_]):-
+    satisfaceNecesidad(Integrante, aspiradora(Potencia)).
+
+satisfaceNecesidad(Integrante, [_,aspiradora(Potencia)]):-
+    satisfaceNecesidad(Integrante, aspiradora(Potencia)).
+
+satisfaceNecesidad(Integrante, [Reemplazable1, Reemplazable2]):-
+    tiene(Integrante, Herramienta),
+	member(Herramienta, [Reemplazable1, Reemplazable2]).
+
+puedeRealizarTarea(Integrante, Tarea):-
+    tiene(Integrante, varitaDeNeutrones),
+	herramientasRequeridas(Tarea, _).
+
+puedeRealizarTarea(Integrante, Tarea):-
+   buster(Integrante),
+   tarea(Tarea),
+   herramientasRequeridas(Tarea, Herramientas),
+   forall(member(Herramienta, Herramientas), satisfaceNecesidad(Integrante, Herramienta)).
+
+%% tareaPedida(Cliente, Tarea, MetrosCuadrados).
+%% precio(Tarea, PrecioXMetroCuad).
+
+precioPorTareaPedida(Cliente, Tarea, PrecioFinal):-
+   tareaPedida(Cliente, Tarea, MetrosCuadrados),
+   precio(Tarea, PrecioXMetroCuad),
+   PrecioFinal is PrecioXMetroCuad * MetrosCuadrados.
+   
+montoTotalPorPedido(Cliente, MontoTotal):-
+   tareaPedida(Cliente,_,_),
+   findall(PrecioFinal, precioPorTareaPedida(Cliente,_,PrecioFinal), Montos),
+   sumlist(Montos,MontoTotal).
+
+tareaPedida(maxi, limpiarBanio, 4).
+tareaPedida(maxi, cortarPasto, 2).
+tareaPedida(maxi, limpiarCalle, 5).
+tareaPedida(jose, cortarPasto, 3).
+tareaPedida(rene, limpiarTecho, 3).
+
+precio(limpiarBanio, 200).
+precio(cortarPasto, 10).
+precio(limpiarCalle, 30).
+precio(limpiarTecho, 200).
+
+aceptaPedido(Integrante, Cliente):-
+    buster(Integrante),
+    tareaPedida(Cliente,_,_),
+	forall(tareaPedida(Cliente,Tarea,_), puedeRealizarTarea(Integrante,Tarea)),
+	cumpleCriterio(Integrante, Cliente).
+
+cumpleCriterio(ray, Cliente):-
+   forall(tareaPedida(Cliente,Tarea,_), Tarea\=limpiarTecho).
+
+cumpleCriterio(winston, Cliente):-
+    montoTotalPorPedido(Cliente, Monto),
+	Monto > 500.
+
+cumpleCriterio(egon, Cliente):-
+    forall(tareaPedida(Cliente,Tarea,_), not(tareaCompleja(Tarea))).
+
+cumpleCriterio(peter, Cliente):-
+    tareaPedida(Cliente,_,_).
+
+tareaCompleja(Tarea):-
+    herramientasRequeridas(Tarea, Herramientas),
+	length(Herramientas, Cantidad),
+	Cantidad > 2.
+
+tareaCompleja(limpiarTecho).
